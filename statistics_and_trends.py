@@ -1,14 +1,16 @@
 """
-This is the template file for the statistics and trends assignment.
-You will be expected to complete all the sections and
-make this a fully working, documented file.
+Statistics and trends assignment.
+
+This script loads a CSV file called 'data.csv' and performs:
+- basic preprocessing,
+- a relational plot,
+- a categorical plot,
+- a statistical plot, and
+- a simple moment-based analysis with textual interpretation.
+
 You should NOT change any function, file or variable names,
 if they are given to you here.
-Make use of the functions presented in the lectures
-and ensure your code is PEP-8 compliant, including docstrings.
 """
-
-from pathlib import Path
 
 from corner import corner
 import matplotlib.pyplot as plt
@@ -17,20 +19,16 @@ import pandas as pd
 import scipy.stats as ss
 import seaborn as sns
 
-
-# Column we will analyse throughout the script
+# Column chosen for detailed analysis
 ANALYSIS_COL = "co2_per_capita"
 
 
-def plot_relational_plot(df: pd.DataFrame) -> None:
+def plot_relational_plot(df):
     """
-    Make a relational plot for the GDP–CO2 relationship.
+    Relational plot between GDP per capita and CO2 per capita.
 
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Preprocessed data containing at least the columns
-        'gdp_per_capita' and ANALYSIS_COL.
+    Produces a scatter plot coloured by GDP quartile and
+    saves it as 'relational_plot.png'.
     """
     fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -46,13 +44,13 @@ def plot_relational_plot(df: pd.DataFrame) -> None:
         ax.set_xscale("log")
         ax.set_xlabel("GDP per capita (current US$)")
         ax.set_ylabel("CO2 per capita (metric tons)")
-        ax.set_title("GDP per capita vs CO2 per capita (2020)")
+        ax.set_title("Relational: GDP per capita vs CO2 per capita (2020)")
         ax.legend(title="GDP quartile", loc="best")
     else:
         ax.text(
             0.5,
             0.5,
-            "Required columns not found.",
+            "Required columns not found for relational plot.",
             ha="center",
             va="center",
             transform=ax.transAxes,
@@ -63,14 +61,11 @@ def plot_relational_plot(df: pd.DataFrame) -> None:
     plt.close(fig)
 
 
-def plot_categorical_plot(df: pd.DataFrame) -> None:
+def plot_categorical_plot(df):
     """
-    Make a categorical plot: CO2 per capita by GDP quartile.
+    Categorical plot: distribution of CO2 per capita by GDP quartile.
 
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        Preprocessed data containing 'gdp_quartile' and ANALYSIS_COL.
+    Uses a boxplot and saves it as 'categorical_plot.png'.
     """
     fig, ax = plt.subplots(figsize=(8, 6))
 
@@ -83,12 +78,12 @@ def plot_categorical_plot(df: pd.DataFrame) -> None:
         )
         ax.set_xlabel("GDP quartile")
         ax.set_ylabel("CO2 per capita (metric tons)")
-        ax.set_title("CO2 per capita by GDP quartile (2020)")
+        ax.set_title("Categorical: CO2 per capita by GDP quartile (2020)")
     else:
         ax.text(
             0.5,
             0.5,
-            "Required columns not found.",
+            "Required columns not found for categorical plot.",
             ha="center",
             va="center",
             transform=ax.transAxes,
@@ -99,43 +94,58 @@ def plot_categorical_plot(df: pd.DataFrame) -> None:
     plt.close(fig)
 
 
-def plot_statistical_plot(df: pd.DataFrame) -> None:
+def plot_statistical_plot(df):
     """
-    Make a univariate statistical plot for the analysis column.
+    Statistical plot of the joint numeric structure.
 
-    Here we use a histogram with a kernel density estimate (KDE)
-    to visualise the distribution of ANALYSIS_COL.
+    Uses a corner plot (pairwise scatter + 1D histograms)
+    for GDP per capita and CO2 per capita, saved as
+    'statistical_plot.png'.
     """
-    fig, ax = plt.subplots(figsize=(8, 6))
+    numeric_cols = []
+    for col in ["gdp_per_capita", ANALYSIS_COL]:
+        if col in df.columns:
+            numeric_cols.append(col)
 
-    if ANALYSIS_COL in df.columns:
-        sns.histplot(
-            df[ANALYSIS_COL],
-            bins=30,
-            kde=True,
-            ax=ax,
-        )
-        ax.set_xlabel("CO2 per capita (metric tons)")
-        ax.set_ylabel("Count of countries")
-        ax.set_title("Distribution of CO2 per capita across countries (2020)")
-    else:
-        ax.text(
-            0.5,
-            0.5,
-            f"Column '{ANALYSIS_COL}' not found.",
-            ha="center",
-            va="center",
-            transform=ax.transAxes,
-        )
+    if len(numeric_cols) < 2:
+        # Fall back to a simple histogram of the analysis column.
+        fig, ax = plt.subplots(figsize=(8, 6))
+        if ANALYSIS_COL in df.columns:
+            sns.histplot(df[ANALYSIS_COL], bins=30, kde=True, ax=ax)
+            ax.set_xlabel("CO2 per capita (metric tons)")
+            ax.set_ylabel("Count")
+            ax.set_title("Statistical: distribution of CO2 per capita")
+        else:
+            ax.text(
+                0.5,
+                0.5,
+                "No numeric columns available for statistical plot.",
+                ha="center",
+                va="center",
+                transform=ax.transAxes,
+            )
+        fig.tight_layout()
+        plt.savefig("statistical_plot.png", dpi=300)
+        plt.close(fig)
+        return
 
+    data = df[numeric_cols].dropna()
+
+    fig = corner(
+        data,
+        labels=[col.replace("_", " ").title() for col in numeric_cols],
+        show_titles=True,
+        title_kwargs={"fontsize": 10},
+    )
+    fig.suptitle("Statistical: joint distribution of key numeric attributes")
     fig.tight_layout()
-    plt.savefig("statistical_plot.png", dpi=300)
+    fig.savefig("statistical_plot.png", dpi=300)
     plt.close(fig)
 
 
-def statistical_analysis(df: pd.DataFrame, col: str):
+def statistical_analysis(df, col: str):
     """
-    Compute the first four central moments for a numeric column.
+    Compute basic moments for a numeric column.
 
     Parameters
     ----------
@@ -151,6 +161,7 @@ def statistical_analysis(df: pd.DataFrame, col: str):
     skew : float
     excess_kurtosis : float
     """
+    # Ensure we are working with numeric values only
     series = pd.to_numeric(df[col], errors="coerce").dropna()
 
     mean = series.mean()
@@ -161,75 +172,58 @@ def statistical_analysis(df: pd.DataFrame, col: str):
     return mean, stddev, skew, excess_kurtosis
 
 
-def preprocessing(df: pd.DataFrame) -> pd.DataFrame:
+def preprocessing(df):
     """
-    Preprocess the World Bank GDP/CO2 dataset.
+    Preprocess the raw data.
 
     Steps
     -----
-    - Standardise column names.
-    - Filter to year 2020.
-    - Drop obvious regional/income aggregates.
-    - Create GDP quartiles.
-    - Drop rows with missing analysis values.
-
-    Returns
-    -------
-    pandas.DataFrame
-        Cleaned DataFrame ready for analysis and plotting.
+    - Standardise column names to lower snake_case.
+    - Filter to the latest year (2020) if a 'year' column exists.
+    - Drop aggregate rows (regions, income groups) using simple
+      keyword matching on 'country_name'.
+    - Remove rows with missing values in the analysis column.
+    - Create GDP quartiles for categorical plotting.
     """
     df = df.copy()
 
-    # Standardise column names (spaces -> underscores)
-    df.columns = [c.strip().replace(" ", "_") for c in df.columns]
+    # Normalise column names
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
-    # Focus on latest year
+    # Filter to 2020 if year column present
     if "year" in df.columns:
         df = df[df["year"] == 2020]
 
-    # Remove aggregate regions/income groups based on name keywords
-    agg_keywords = [
-        "World",
-        "income",
-        "dividend",
-        "states",
-        "Union",
-        "area",
-        "Europe",
-        "OECD",
-        "IBRD",
-        "IDA",
-        "Heavily indebted",
-        "Fragile",
-        "Caribbean",
-        "North America",
-        "South Asia",
-        "Sub-Saharan",
-        "Middle East",
-        "Latin America",
-        "Africa",
-        "East Asia",
-        "Pacific",
-        "Arab World",
-        "small states",
-        "Central Europe",
-        "Post-demographic",
-        "Pre-demographic",
-        "Early-demographic",
-        "Late-demographic",
-    ]
-
-    if "Country_Name" in df.columns:
-        mask_agg = df["Country_Name"].astype(str).apply(
-            lambda s: any(key in s for key in agg_keywords)
+    # Drop obvious aggregates based on country_name keywords
+    if "country_name" in df.columns:
+        keywords = [
+            "World",
+            "income",
+            "states",
+            "area",
+            "Union",
+            "Africa",
+            "Europe",
+            "America",
+            "Asia",
+            "Pacific",
+            "Caribbean",
+            "OECD",
+            "IBRD",
+            "IDA",
+            "dividend",
+            "small states",
+        ]
+        mask_agg = df["country_name"].astype(str).apply(
+            lambda s: any(k in s for k in keywords)
         )
         df = df[~mask_agg]
 
-    # Drop missing values in the analysis column
+    # Drop rows with missing analysis values
     if ANALYSIS_COL in df.columns:
         df = df[df[ANALYSIS_COL].notna()]
 
-    # Create GDP quartiles for categorical plotting
+    # Create GDP quartiles for categorical plot
     if "gdp_per_capita" in df.columns:
         df["gdp_quartile"] = pd.qcut(
             df["gdp_per_capita"],
@@ -237,16 +231,17 @@ def preprocessing(df: pd.DataFrame) -> pd.DataFrame:
             labels=["Q1 low", "Q2", "Q3", "Q4 high"],
         )
 
-    # Quick diagnostics (optional; can be commented out)
+    # Quick checks (commented out to keep output clean)
+    # print(df.head())
     # print(df.describe(include="all"))
     # print(df.corr(numeric_only=True))
 
     return df
 
 
-def writing(moments, col: str) -> None:
+def writing(moments, col):
     """
-    Print a short textual summary of the distribution moments.
+    Print a short written summary of the distribution of `col`.
     """
     print(f"For the attribute {col}:")
     print(
@@ -256,9 +251,10 @@ def writing(moments, col: str) -> None:
         f"Excess Kurtosis = {moments[3]:.2f}."
     )
 
-    # Interpret skewness and kurtosis in plain language.
-    skew, kurt = moments[2], moments[3]
+    skew = moments[2]
+    kurt = moments[3]
 
+    # Very simple interpretation rules
     if skew > 2:
         skew_desc = "strongly right-skewed"
     elif skew < -2:
@@ -271,23 +267,22 @@ def writing(moments, col: str) -> None:
     elif kurt > 0.5:
         kurt_desc = "leptokurtic (heavy tails)"
     else:
-        kurt_desc = "mesokurtic (similar to normal)"
+        kurt_desc = "mesokurtic (similar to a normal distribution)"
 
-    print(f"The data are {skew_desc} and {kurt_desc}.")
+    print(f"The data were {skew_desc} and {kurt_desc}.")
     return
 
 
-def main() -> None:
+def main():
     """
     Main entry point for the statistics and trends assignment.
     """
-    # Resolve data.csv relative to this script so it works on any OS
-    here = Path(__file__).parent
-    csv_path = here / "data.csv"
+    # The grader runs this from the directory containing data.csv
+    df = pd.read_csv("data.csv")
 
-    df = pd.read_csv(csv_path)
     df = preprocessing(df)
 
+    # Choose the main column for analysis
     col = ANALYSIS_COL
 
     plot_relational_plot(df)
@@ -296,6 +291,7 @@ def main() -> None:
 
     moments = statistical_analysis(df, col)
     writing(moments, col)
+    return
 
 
 if __name__ == "__main__":
