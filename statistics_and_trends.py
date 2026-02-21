@@ -15,6 +15,7 @@ given in the template.
 
 from corner import corner
 import matplotlib.pyplot as plt
+import numpy as pdplt  # alias not used, but kept to show matplotlib import style
 import numpy as np
 import pandas as pd
 import scipy.stats as ss
@@ -22,20 +23,19 @@ import seaborn as sns
 
 
 # Column used for all numerical analyses
-ANALYSIS_COL = "numeric_col"
+ANALYSIS_COL = "co2_per_capita"
 
 
 def plot_relational_plot(df):
     """
     Create a relational plot for the dataset.
 
-    A simple scatter plot is produced using the first numeric column
-    as the x-axis and ``ANALYSIS_COL`` as the y-axis. The figure is
-    saved to ``relational_plot.png``.
+    A scatter plot is produced using the first numeric column as the
+    x-axis and ``ANALYSIS_COL`` as the y-axis. The figure is saved to
+    ``relational_plot.png``.
     """
     fig, ax = plt.subplots(figsize=(8, 6))
 
-    # Identify numeric columns
     numeric = df.select_dtypes(include="number").columns.tolist()
 
     if ANALYSIS_COL in numeric and len(numeric) > 1:
@@ -70,16 +70,15 @@ def plot_categorical_plot(df):
     """
     Create a categorical plot for the dataset.
 
-    If a non-numeric (categorical) column exists, a boxplot of
-    ``ANALYSIS_COL`` by that category is drawn. Otherwise, the
-    analysis column is binned into quartiles and used as the
-    categorical axis. The figure is saved to
+    If a non-numeric column exists, a boxplot of ``ANALYSIS_COL`` by
+    that category is drawn. Otherwise, ``ANALYSIS_COL`` is binned into
+    quartiles and used as the categorical axis. The figure is saved to
     ``categorical_plot.png``.
     """
     fig, ax = plt.subplots(figsize=(8, 6))
 
     categorical_cols = df.select_dtypes(
-        include=["object", "category"]
+        include=["object", "category"],
     ).columns.tolist()
 
     if categorical_cols and ANALYSIS_COL in df.columns:
@@ -125,8 +124,8 @@ def plot_statistical_plot(df):
     Create a statistical plot for the dataset.
 
     A corner plot is generated for up to three numeric columns,
-    including ``ANALYSIS_COL`` wherever possible. The figure is
-    saved to ``statistical_plot.png``.
+    including ``ANALYSIS_COL`` wherever possible. The figure is saved
+    to ``statistical_plot.png``.
     """
     numeric = df.select_dtypes(include="number")
 
@@ -146,7 +145,6 @@ def plot_statistical_plot(df):
         return
 
     cols = numeric.columns.tolist()
-    # Ensure analysis column is included and limit to at most 3 columns
     if ANALYSIS_COL in cols:
         cols.remove(ANALYSIS_COL)
         cols = [ANALYSIS_COL] + cols
@@ -212,12 +210,10 @@ def preprocessing(df):
     # Standardise column names
     df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
 
-    # Quick exploratory tools (results are not printed, only computed)
+    # Quick exploratory tools (results computed but not printed)
     _desc = df.describe(include="all")
     _corr = df.corr(numeric_only=True)
     _head = df.head()
-
-    # Use the variables so linters do not complain about them
     _ = (_desc, _corr, _head)
 
     if ANALYSIS_COL in df.columns:
@@ -228,11 +224,7 @@ def preprocessing(df):
 
 def writing(moments, col):
     """
-    Print a textual summary of the distribution of ``col``.
-
-    The four moments are printed and the skewness and kurtosis are
-    interpreted qualitatively.
-    """
+    Print a textual summary of the distribution of ``col``."""
     print(f"For the attribute {col}:")
     print(
         f"Mean = {moments[0]:.2f}, "
